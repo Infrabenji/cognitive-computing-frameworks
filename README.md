@@ -66,7 +66,7 @@ python Figure_13.py
 
 ### Data
 
-Ensure all required data files are placed in the `data/` directory of the `Paper1_Active_Inference_Hebbian` folder.
+Data files are found in the `data/` directory of the `Paper1_Active_Inference_Hebbian` folder.
 
 ## Link to Paper
 
