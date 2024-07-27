@@ -1,1 +1,617 @@
+import collections
+import numpy as np
+from concurrent.futures import ThreadPoolExecutor
+import pandas as pd
+import matplotlib.pyplot as plt
+import time
 
+# Attentional Selection (AS)
+def bottom_up_attention(sensory_input, feature_weights):
+    saliency_map = np.dot(sensory_input, feature_weights)
+    return saliency_map
+
+def top_down_attention(saliency_map, goal_probability):
+    modulated_saliency = saliency_map * goal_probability
+    return modulated_saliency
+
+def attentional_selection(sensory_input, feature_weights, goal_probability):
+    saliency_map = bottom_up_attention(sensory_input, feature_weights)
+    modulated_saliency = top_down_attention(saliency_map, goal_probability)
+    return modulated_saliency
+
+# Memory Encoding & Retrieval (MER)
+class MemorySystem:
+    def __init__(self, capacity, hopfield_size):
+        self.capacity = capacity
+        self.memory_storage = []
+        self.hopfield_network = HopfieldNetwork(size=hopfield_size)
+
+    def memory_encoding(self, sensory_information):
+        encoded_memory = self._apply_hebbian_learning_rule(sensory_information)
+        self.memory_storage.append(encoded_memory)
+        if len(self.memory_storage) > self.capacity:
+            self.memory_storage.pop(0)
+        self.hopfield_network.train(self.memory_storage)
+
+    def memory_retrieval(self, retrieval_cues):
+        if len(retrieval_cues) != self.hopfield_network.size:
+            retrieval_cues = np.resize(retrieval_cues, self.hopfield_network.size)
+        retrieved_memory = self.hopfield_network.retrieve(retrieval_cues)
+        return retrieved_memory
+
+    def _apply_hebbian_learning_rule(self, data, other_data=None):
+        eta = 0.1  # Learning rate
+        if other_data is None:
+            other_data = data
+        encoded_data = eta * data * other_data
+        return encoded_data
+
+class HopfieldNetwork:
+    def __init__(self, size):
+        self.size = size
+        self.weights = np.zeros((size, size))
+
+    def train(self, patterns):
+        num_patterns = len(patterns)
+        for p in patterns:
+            self.weights += np.outer(p, p)
+        self.weights /= num_patterns
+        np.fill_diagonal(self.weights, 0)  # No self-connections
+
+    def retrieve(self, pattern, steps=10):
+        state = pattern.copy()
+        for _ in range(steps):
+            for i in range(self.size):
+                net_input = np.dot(self.weights[i], state)
+                state[i] = 1 if net_input >= 0 else -1
+        return state
+
+# Example usage
+patterns = [np.array([1, -1, 1, -1]), np.array([-1, 1, -1, 1])]
+hopfield_network = HopfieldNetwork(size=4)
+hopfield_network.train(patterns)
+
+query = np.array([1, -1, 0, 0])
+retrieved_memory = hopfield_network.retrieve(query)
+
+# Long-term memory storage
+long_term_memory = {}
+
+# Short-term memory with limited capacity
+short_term_memory = collections.deque(maxlen=100)
+
+# Working memory for active processing
+working_memory = {}
+
+def encode_to_ltm(data):
+    key = generate_unique_key(data)
+    long_term_memory[key] = data
+
+def encode_to_stm(data):
+    short_term_memory.append(data)
+
+def encode_to_wm(data):
+    key = generate_unique_key(data)
+    working_memory[key] = data
+
+def retrieve_from_ltm(query):
+    results = [data for key, data in long_term_memory.items() if is_relevant(data, query)]
+    return results
+
+def retrieve_from_stm(query):
+    results = [data for data in short_term_memory if is_relevant(data, query)]
+    return results
+
+def retrieve_from_wm(query):
+    results = [data for key, data in working_memory.items() if is_relevant(data, query)]
+    return results
+
+def is_relevant(data, query):
+    return query in data
+
+def integrate_memories(query):
+    ltm_results = retrieve_from_ltm(query)
+    stm_results = retrieve_from_stm(query)
+    wm_results = retrieve_from_wm(query)
+    
+    all_results = ltm_results + stm_results + wm_results
+    sorted_results = sorted(all_results, key=lambda x: relevance_score(x, query), reverse=True)
+    return sorted_results
+
+def relevance_score(data, query):
+    return data.count(query)
+
+# Reinforcement Learning Feature (RLF)
+class ReinforcementLearning:
+    def __init__(self, learning_rate, discount_factor, action_space):
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
+        self.q_table = {}
+        self.action_space = action_space
+
+    def get_q_value(self, state, action):
+        return self.q_table.get((state, action), 0)
+
+    def get_max_q_value(self, state):
+        return max([self.get_q_value(state, a) for a in self.action_space], default=0)
+
+    def set_q_value(self, state, action, value):
+        self.q_table[(state, action)] = value
+
+    def q_learning_update(self, state, action, reward, next_state):
+        current_q_value = self.get_q_value(state, action)
+        max_next_q_value = self.get_max_q_value(next_state)
+        updated_q_value = current_q_value + self.learning_rate * (
+                reward + self.discount_factor * max_next_q_value - current_q_value
+        )
+        self.set_q_value(state, action, updated_q_value)
+
+    def get_possible_actions(self, state):
+        return self.action_space
+
+# Example usage
+action_space = [0, 1, 2, 3]  # Example action space
+rl = ReinforcementLearning(learning_rate=0.1, discount_factor=0.9, action_space=action_space)
+
+# Optimized distress dynamics calculation
+def calculate_distress_change(D, C, S, W, M, a, B, y, sigma, epsilon, lambda_, t):
+    inferred_context = np.dot(C, M)  # Ensure the correct dimensions for the dot product
+    distress_change = a * D + B * C + y * S + sigma * W + epsilon * np.dot(M, D)
+    modulated_distress_change = distress_change * inferred_context
+    return modulated_distress_change
+
+# Example parameters
+a, B, y, sigma, epsilon, lambda_ = 0.5, 0.4, 0.3, 0.2, 0.1, 0.05
+D = np.array([[0.5, 0.6, 0.7], [0.3, 0.4, 0.5], [0.2, 0.3, 0.4]])
+C = np.array([0.8, 0.8, 0.8])  # Ensure C has the same number of columns as M
+S = np.array([0.7])
+W = np.array([0.6])
+M = np.array([[0.2, 0.3, 0.5], [0.4, 0.1, 0.5], [0.1, 0.2, 0.7]])
+t = 1
+
+# Parallel processing for distress dynamics calculations
+with ThreadPoolExecutor() as executor:
+    futures = [executor.submit(calculate_distress_change, D[i], C, S, W, M[i], a, B, y, sigma, epsilon, lambda_, t) for i in range(len(D))]
+    results = [future.result() for future in futures]
+
+# Update distress matrix with results
+D = np.array(results)
+
+# Refined action selection mechanism
+def softmax(x):
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum(axis=0)
+
+def select_action(beliefs, actions, fitness_scores):
+    probabilities = softmax(fitness_scores)
+    action_index = np.random.choice(len(actions), p=probabilities)
+    return actions[action_index]
+
+# Example actions and fitness scores
+actions = ['action1', 'action2', 'action3']
+fitness_scores = [0.2, 0.3, 0.5]
+beliefs = np.array([0.6, 0.7, 0.8])
+
+# Select action based on refined mechanism
+selected_action = select_action(beliefs, actions, fitness_scores)
+print(f'Selected Action: {selected_action}')
+
+# Constants for Distress Dynamics (DD)
+alpha = 0.2
+beta = 0.3
+gamma = 0.1
+xi = 0.4
+epsilon = 0.5
+
+# Emotional states as modulators (values between 0 and 1)
+emotional_states = {
+    'calm': 0.7,
+    'focused': 0.8,
+    'stressed': 0.3,
+    'happy': 0.6,
+    'curious': 0.5,
+    'anxious': 0.4
+}
+
+# Distress Dynamics function
+def update_distress_with_recovery(D, distress_change, recovery_rate=0.1):
+    # Apply distress change
+    D += distress_change
+    # Apply recovery
+    D -= recovery_rate * D
+    return D
+
+def regulate_distress(D, threshold=5.0, reduction_factor=0.5):
+    D[D > threshold] *= reduction_factor
+    return D
+
+def distress_dynamics(D, C, inferred_context, W, M, emotional_states):
+    overall_emotional_modulation = np.mean(list(emotional_states.values()))  # Calculate overall emotional modulation
+    
+    # Initialize the distress change matrix with the same shape as D
+    distress_change = np.zeros_like(D)
+    
+    # Loop through each element in D
+    for i in range(D.shape[0]):
+        for j in range(D.shape[1]):
+            individual_M = M[i, :]  # Extract the individual row of M
+            individual_D = D[:, j]  # Extract the individual column of D
+            print(f"Calculating distress change for element ({i}, {j}):")
+            print(f"Current Distress (D[{i}, {j}]): {D[i, j]}")
+            print(f"Context (C): {C}")
+            print(f"Inferred Context: {inferred_context}")
+            print(f"Weight (W): {W}")
+            print(f"Row of M: {individual_M}")
+            print(f"Column of D: {individual_D}")
+            
+            # Calculate distress change
+            distress_change_value = (
+                alpha * D[i, j] + 
+                beta * C[0] +  # Ensure C is treated as scalar
+                gamma * inferred_context + 
+                xi * W + 
+                epsilon * np.dot(individual_M, individual_D)
+            )
+            modulated_distress_change = distress_change_value * overall_emotional_modulation / (1 + overall_emotional_modulation)
+            distress_change[i, j] = modulated_distress_change
+            
+            print(f"Distress Change (before modulation): {distress_change_value}")
+            print(f"Modulated Distress Change: {modulated_distress_change}")
+
+    return distress_change
+
+# Test Case
+D = np.array([[0.5, 0.6, 0.7],
+              [0.3, 0.4, 0.5],
+              [0.2, 0.3, 0.4]])
+C = [0.8]
+inferred_context = 0.9441566675421182
+W = 0.7
+M = np.array([[0.2, 0.3, 0.5],
+              [0.4, 0.1, 0.5],
+              [0.1, 0.2, 0.7]])
+
+distress_history = []
+
+emotional_states = {
+    'calm': 0.7,
+    'focused': 0.8,
+    'stressed': 0.3,
+    'happy': 0.6,
+    'curious': 0.5,
+    'anxious': 0.4
+}
+
+# Main loop to update distress and record history
+for step in range(10):  # Assuming 10 iterations for this example
+    distress_change = distress_dynamics(D, C, inferred_context, W, M, emotional_states)
+    D += distress_change
+    D = regulate_distress(D)
+    distress_history.append(D.copy())
+
+# Convert distress history to a numpy array for easier plotting
+distress_history = np.array(distress_history)
+
+# Plotting function
+def plot_distress_over_time(distress_history):
+    num_iterations, num_elements, _ = distress_history.shape
+    for i in range(num_elements):
+        for j in range(num_elements):
+            plt.plot(range(num_iterations), distress_history[:, i, j], label=f'Element ({i}, {j})')
+    
+    plt.xlabel('Iteration')
+    plt.ylabel('Distress Level')
+    plt.title('Distress Level Over Time')
+    plt.legend()
+    plt.show()
+
+# Call the plotting function
+plot_distress_over_time(distress_history)
+
+# Function to ensure arrays have the same length
+def ensure_same_length(arr1, arr2):
+    max_length = max(len(arr1), len(arr2))
+    if len(arr1) < max_length:
+        arr1 = np.pad(arr1, (0, max_length - len(arr1)), 'constant')
+    if len(arr2) < max_length:
+        arr2 = np.pad(arr2, (0, max_length - len(arr2)), 'constant')
+    return arr1, arr2
+
+# Belief Dynamics (BD)
+def belief_change_over_time(evidence, belief, k1, k2):
+    evidence, belief = ensure_same_length(evidence, belief)
+    dB_dt = k1 * evidence - k2 * belief
+    return dB_dt
+
+def evidence_change_over_time(contextual_factors, evidence, k3, k4):
+    contextual_factors, evidence = ensure_same_length(contextual_factors, evidence)
+    dE_dt = k3 * np.array(contextual_factors) - k4 * evidence
+    return dE_dt
+
+def belief_update(evidence, contextual_factors, beliefs, prior_prob, k1, k2, k3, k4, weights, distress_level, performance, markovian_matrix=None, reinforcement_factor=0, custom_reward=None):
+    dynamic_k1 = adapt_learning_rate_k1(distress_level, performance)
+    dynamic_k2 = adapt_learning_rate_k2(distress_level, performance)
+    dynamic_k3 = adapt_learning_rate_k3(distress_level, performance)
+    dynamic_k4 = adapt_learning_rate_k4(distress_level, performance)
+    
+    adaptive_weights = adapt_weights(weights, distress_level, performance)
+    
+    evidence, beliefs = ensure_same_length(evidence, beliefs)
+    contextual_factors, beliefs = ensure_same_length(contextual_factors, beliefs)
+    
+    B_dt = belief_change_over_time(evidence, beliefs, dynamic_k1, dynamic_k2)
+    E_dt = evidence_change_over_time(contextual_factors, evidence, dynamic_k3, dynamic_k4)
+    
+    B_dt_evidence = B_dt * prior_prob
+    B_dt_contextual = np.sum(adaptive_weights * np.array(contextual_factors) * beliefs * (1 - beliefs))
+    markovian_updates = np.dot(markovian_matrix, beliefs) if markovian_matrix is not None else 0
+    custom_reward_update = reinforcement_factor * custom_reward if custom_reward is not None else 0
+    
+    B_dt_total = B_dt_evidence + B_dt_contextual + markovian_updates + custom_reward_update
+    
+    # Ensure B_dt_total and beliefs have compatible shapes
+    B_dt_total, beliefs = ensure_same_length(B_dt_total, beliefs)
+    E_dt, evidence = ensure_same_length(E_dt, evidence)
+    
+    # Debugging prints
+    print(f"B_dt_total shape: {B_dt_total.shape}, Beliefs shape: {beliefs.shape}")
+    
+    return B_dt_total, E_dt
+
+def bayesian_update(evidence, contextual_factors, beliefs, prior_prob, k1, k2, k3, k4, weights, distress_level, performance, markovian_matrix=None, reinforcement_factor=0, custom_reward=None):
+    B_dt, E_dt = belief_update(evidence, contextual_factors, beliefs, prior_prob, k1, k2, k3, k4, weights, distress_level, performance, markovian_matrix, reinforcement_factor, custom_reward)
+    updated_belief = beliefs + B_dt
+    updated_evidence = np.resize(evidence, E_dt.shape) + E_dt  # Ensure evidence is resized to match E_dt
+    
+    # Ensure updated_evidence and evidence have compatible shapes
+    updated_evidence, evidence = ensure_same_length(updated_evidence, evidence)
+    
+    # Debugging prints
+    print(f"Updated Beliefs shape: {updated_belief.shape}, Updated Evidence shape: {updated_evidence.shape}")
+    
+    return updated_belief, updated_evidence
+
+def adapt_learning_rate_k1(distress_level, performance):
+    base_rate = 0.1
+    if np.any(distress_level > 0.5):
+        return base_rate / (1 + np.mean(distress_level))
+    if np.any(performance > 0.7):
+        return base_rate / (1 + np.mean(performance))
+    return base_rate
+
+def adapt_learning_rate_k2(distress_level, performance):
+    base_rate = 0.1
+    if np.any(distress_level > 0.5):
+        return base_rate * (1 + np.mean(distress_level))
+    if np.any(performance < 0.3):
+        return base_rate * (1 + (1 - np.mean(performance)))
+    return base_rate
+
+def adapt_learning_rate_k3(distress_level, performance):
+    base_rate = 0.1
+    if np.any(distress_level > 0.5):
+        return base_rate / (1 + np.mean(distress_level))
+    if np.any(performance > 0.7):
+        return base_rate / (1 + np.mean(performance))
+    return base_rate
+
+def adapt_learning_rate_k4(distress_level, performance):
+    base_rate = 0.1
+    if np.any(distress_level > 0.5):
+        return base_rate * (1 + np.mean(distress_level))
+    if np.any(performance < 0.3):
+        return base_rate * (1 + (1 - np.mean(performance)))
+    return base_rate
+
+def adapt_weights(weights, distress_level, performance):
+    adjusted_weights = weights * (1 + np.mean(distress_level)) * (1 + np.mean(performance))
+    return adjusted_weights
+
+# Prioritization, Optimization, Iteration (POI)
+def perceptual_gating(input_data, beliefs):
+    return np.dot(input_data, beliefs)
+
+def optimization_objective(desired_output, actual_output):
+    error = np.linalg.norm(desired_output - actual_output)
+    return error
+
+def gradient_wg(output, desired_output):
+    return 2 * (output - desired_output)
+
+def gradient_wn(output, desired_output):
+    return -2 * (output - desired_output)
+
+def poi_algorithm(input_data, beliefs, noise, desired_output, max_iterations=100, tolerance=1e-6):
+    wg, wn = 1.0, 1.0
+    iteration = 0
+    
+    while iteration < max_iterations:
+        output = wg * perceptual_gating(input_data, beliefs) - wn * noise
+        error = optimization_objective(desired_output, output)
+        
+        if error < tolerance:
+            print("Converged after", iteration, "iterations.")
+            break
+        
+        wg -= 0.01 * gradient_wg(output, desired_output)
+        wn -= 0.01 * gradient_wn(output, desired_output)
+        
+        iteration += 1
+    
+    return wg, wn, output
+
+# Requirement Equation (RE) Subsystem
+def requirement_equation(d, a, P_s, P_d_given_s, P_s_prime_given_s_a, v_s_s_prime):
+    fitness = 0
+    d_index = int(d[0]) if len(d) > 0 else 0  # Use the first element of d for indexing
+    for s in range(len(P_s)):
+        for s_prime in range(len(P_s_prime_given_s_a[s][a])):
+            fitness += P_s[s] * P_d_given_s[d_index][s] * P_s_prime_given_s_a[s][a][s_prime] * v_s_s_prime[s][s_prime]
+    return fitness
+
+class ContextualFactors:
+    def __init__(self, prior_knowledge):
+        self.prior_knowledge = prior_knowledge
+
+    def infer_context(self, data):
+        return data * self.prior_knowledge
+
+class ProblemSolvingIntelligence:
+    def __init__(self):
+        start_time = time.time()
+        self.memory_system = MemorySystem(capacity=100, hopfield_size=100)
+        self.contextual_factors = ContextualFactors(prior_knowledge=0.7)
+        self.emotional_states = emotional_states
+        self.D = np.array([[0.5, 0.5, 0.5],
+                           [0.5, 0.5, 0.5],
+                           [0.5, 0.5, 0.5]])  # Initial distress level matrix
+        self.C = 0.8  # Communication intensity
+        self.W = 0.7  # External stressors
+        self.M = np.array([[0.2, 0.3, 0.5],
+                           [0.4, 0.1, 0.5],
+                           [0.1, 0.2, 0.7]])  # Sample transition matrix
+        self.wg = 1.0  # Initial perceptual gating weight
+        self.wn = 1.0  # Initial noise reduction weight
+        self.P_s = np.random.rand(3)  # Example state probabilities
+        self.P_d_given_s = np.random.rand(3, 3)  # Example probabilities of sense data given state
+        self.P_s_prime_given_s_a = np.random.rand(3, 3, 3)  # Example transition probabilities
+        self.v_s_s_prime = np.random.rand(3, 3)  # Example fitness values
+        end_time = time.time()
+        print(f"Initialization time: {end_time - start_time} seconds")
+
+    def select_action(self, inquiry):
+        actions = ['action1', 'action2', 'action3']
+        chosen_action = np.random.choice(actions)  # Replace with a more sophisticated mechanism if needed
+        return chosen_action
+
+    def process_inquiry(self, inquiry):
+        # Step 1: Input Reception
+        sensory_input = self.interpret_inquiry(inquiry)
+        
+        if len(sensory_input) == 0:
+            sensory_input = np.array([0])
+        
+        # Step 2: Initial Processing
+        feature_weights = np.random.rand(len(sensory_input))  # Example weights
+        saliency_map = bottom_up_attention(sensory_input, feature_weights)
+        
+        if np.isscalar(saliency_map):
+            saliency_map = np.array([saliency_map])
+        
+        goal_probability = np.random.rand(len(saliency_map))  # Example goal probabilities
+        modulated_saliency = top_down_attention(saliency_map, goal_probability)
+        
+        # Step 3: Memory Retrieval
+        retrieved_memory = self.memory_system.memory_retrieval(modulated_saliency)
+        
+        # Step 4: Belief Update
+        inferred_context = self.contextual_factors.infer_context(np.random.rand())  # Example current interaction
+        beliefs = np.random.rand(3)  # Example initial beliefs
+        prior_prob = 0.5
+        k1, k2, k3, k4, weights = 0.1, 0.1, 0.1, 0.1, np.random.rand(3)
+        performance = np.random.rand()  # Example performance
+        updated_beliefs, updated_evidence = bayesian_update(sensory_input, [inferred_context], beliefs, prior_prob, k1, k2, k3, k4, weights, self.D, performance)
+        
+        # Step 5: Distress Modulation
+        distress_change = distress_dynamics(self.D, [self.C], inferred_context, self.W, self.M, self.emotional_states)
+        self.D += distress_change * 0.1  # Update distress level
+
+        # Step 6: Perceptual Gating and Noise Reduction
+        noise = np.random.rand(len(updated_beliefs))  # Example noise
+        desired_output = np.random.rand(len(updated_beliefs))  # Example desired output
+        self.wg, self.wn, output = poi_algorithm(updated_beliefs, beliefs, noise, desired_output)
+        
+        # Step 7: Action Selection with RE Subsystem
+        actions = ['action1', 'action2', 'action3']
+        fitness_scores = [requirement_equation(sensory_input, i, self.P_s, self.P_d_given_s, self.P_s_prime_given_s_a, self.v_s_s_prime) for i in range(len(actions))]
+        action = actions[np.argmax(fitness_scores)]
+        
+        # Step 8: Response Generation
+        response = self.generate_response(action, updated_beliefs)
+        
+        print(f"Distress Level: {self.D}, Beliefs: {updated_beliefs}, Output: {output}, Fitness Scores: {fitness_scores}")
+        
+        return response, updated_beliefs, self.D
+
+    def interpret_inquiry(self, inquiry):
+        return np.array([float(char) for char in inquiry if char.isdigit()])
+
+    def generate_response(self, action, beliefs):
+        return f"Action: {action}, Beliefs: {beliefs}"
+
+# Updated validate_model function with timers and plotting
+
+def validate_model(psi, inquiries):
+    results = []
+    times = []
+    belief_history = []
+    distress_history = []
+
+    for inquiry in inquiries:
+        start_time = time.time()
+        
+        initial_beliefs = psi.memory_system.memory_storage.copy()
+        initial_distress = np.copy(psi.D).flatten()  # Ensure a deep copy and flatten
+        
+        response, updated_beliefs, updated_distress = psi.process_inquiry(inquiry)
+        
+        end_time = time.time()
+        times.append(end_time - start_time)
+        
+        final_beliefs = updated_beliefs
+        final_distress = updated_distress.flatten()  # Ensure a deep copy and flatten
+
+        belief_history.append(final_beliefs)
+        distress_history.append(final_distress)
+
+        results.append({
+            "inquiry": inquiry,
+            "initial_beliefs": initial_beliefs,
+            "final_beliefs": final_beliefs,
+            "initial_distress": initial_distress,
+            "final_distress": final_distress,
+            "response": response
+        })
+
+    # Convert belief and distress histories to arrays for proper plotting
+    belief_history = np.array(belief_history)
+    distress_history = np.array(distress_history)
+
+    # Plotting Beliefs
+    plt.figure(figsize=(10, 5))
+    for i in range(belief_history.shape[1]):  # Iterate over belief dimensions
+        plt.plot(range(len(belief_history)), belief_history[:, i], marker='o', label=f"Belief {i+1}")
+    plt.xlabel('Inquiry Index')
+    plt.ylabel('Beliefs')
+    plt.title('Beliefs Over Time')
+    plt.legend(title='Beliefs')
+    plt.show()
+
+    # Plotting Processing Times
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(len(times)), times, marker='o', label='Processing Time')
+    plt.xlabel('Inquiry Index')
+    plt.ylabel('Processing Time (s)')
+    plt.title('Processing Time per Inquiry')
+    plt.legend()
+    plt.show()
+
+    return results
+
+# Example usage
+psi = ProblemSolvingIntelligence()
+inquiries = [
+    "What is the weather today?",
+    "What is the capital of France?",
+    "Tell me a joke.",
+    "How do you make a cake?",
+    "What is the meaning of life?",
+    "Solve the equation 2 + 2.",
+    "What is the population of the world?"
+]
+
+validation_results = validate_model(psi, inquiries)
+
+# Convert results to DataFrame and display
+df_results = pd.DataFrame(validation_results)
+print(df_results)
