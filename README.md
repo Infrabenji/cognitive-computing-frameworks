@@ -52,7 +52,7 @@ python Figure_13.py
 Comparative Analysis of Active Inference in Hebbian Networks and Cognitive Computing Frameworks (Link)
 
 
-The Other directory contains supplementary material that supports the research in the paper.
+The 'Other' directory contains supplementary material that supports the research in the paper.
 
 For any issues or questions, please open an issue in the repository.
 
