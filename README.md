@@ -29,7 +29,7 @@ Run `Figure_10_14_15.py` to generate Figures 10, 14, and 15.
 
 ```bash
 cd Paper1_Active_Inference_Hebbian
-python Figure_10_14_15.py
+python Figure_10_14_15.py'''
 
 ######Generating Figure 11
 
@@ -38,7 +38,7 @@ Run 'Figure_11.py' to generate Figure 11.
 '''cd Paper1_Active_Inference_Hebbian
 python Figure_11.py
 
-#######Generating Figure 12
+########Generating Figure 12
 
 Run 'Figure_12.py' to generate Figure 12.
 
