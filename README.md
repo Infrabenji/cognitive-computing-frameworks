@@ -8,7 +8,7 @@ This repository contains the code and data for the paper:
 ```
 cognitive-computing-frameworks/
 │
-├── Paper1_Active_Inference_Hebbian/
+├── Paper2_Active_Inference_Hebbian/
 │   ├── main.py
 │   ├── Figure_10_14_15.py
 │   ├── Figure_11.py
