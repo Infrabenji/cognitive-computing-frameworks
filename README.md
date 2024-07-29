@@ -70,7 +70,7 @@ Data files are found in the `data/` directory of the `Paper1_Active_Inference_He
 
 ## Link to Paper
 
-[Comparative Analysis of Active Inference in Hebbian Networks and Cognitive Computing Frameworks](link_to_paper)
+[Comparative Analysis of Active Inference in Hebbian Networks and Cognitive Computing Frameworks]([https://zenodo.org/records/12562484])
 
 ## Additional Information
 
